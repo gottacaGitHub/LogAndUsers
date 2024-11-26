@@ -1,0 +1,79 @@
+#!/bin/bash
+
+case "$1" in
+  shortlist)
+    echo consumer-restart consumer-restart-all
+    exit 1
+    ;;
+  up)
+    docker compose up -d --force-recreate --remove-orphans $2
+    ;;
+  down)
+    docker compose down $2
+    ;;
+  stop)
+    docker compose stop $2
+    ;;
+  restart)
+    docker compose restart $2
+    ;;
+  update)
+    git pull
+    composer install
+    docker compose exec php-fpm php /app/bin/console doctrine:migrations:migrate --no-interaction
+    docker compose exec php-fpm php /app/bin/console c:c
+    ;;
+  migrate-run)
+    docker compose exec php-fpm php /app/bin/console doctrine:migrations:migrate --no-interaction
+    ;;
+  migrate-redo)
+    docker compose exec php-fpm php /app/bin/console doctrine:migrations:execute $2 --down --no-interaction
+    docker compose exec php-fpm php /app/bin/console doctrine:migrations:execute $2 --up --no-interaction
+    ;;
+  migrate-create)
+    docker compose exec php-fpm php /app/bin/console doctrine:migrations:generate
+    ;;
+  build)
+    docker compose build
+    ;;
+  cc)
+    docker compose exec php-fpm php /app/bin/console c:c
+    ;;
+  command)
+    docker compose exec php-fpm php /app/bin/console $2 ${@:3}
+    ;;
+  composer-install)
+    docker compose exec php-fpm composer install
+    ;;
+  composer-update)
+    docker compose exec php-fpm composer update
+    ;;
+  dump-sql-schema)
+    docker compose exec php-fpm php /app/bin/console doctrine:schema:create --dump-sql > config/base.sql
+    ;;
+  *)
+    echo "Usage: $0 {command}
+    consumer-restart {consumer} - restart consumer
+    consumer-restart-all        - restart all consumer
+    consumer-reread             - reread supervisor config file (docker/supervisor/supervisord.conf -> /etc/supervisor/conf.d/supervisord.conf)
+    up                          - up docker
+    down                        - down docker
+    stop {name]                 - stop single docker container
+    restart {name}              - restart all or single docker container
+    update                      - update project (git puul, composer install, run migrate, clear cache)
+    migrate-run                 - run migrate
+    migrate-redo {id}           - redo single migrate
+    migrate-create              - Generate a blank migration class
+    build                       - build project
+    cc                          - clear cache
+    command {name}              - execute command
+    composer-install            - composer install
+    composer-update             - composer update
+    dump-sql-schema             - create sql schema
+    " >&2
+    exit 1
+    ;;
+
+esac
+
+exit 0

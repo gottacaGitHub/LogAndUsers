@@ -1,0 +1,1 @@
+15 * * * * /usr/bin/php /path_project/bin/console app:update-user-log >> /dev/null 2>&1
